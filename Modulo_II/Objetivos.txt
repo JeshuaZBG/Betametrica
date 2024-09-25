@@ -1,0 +1,13 @@
+########
+## Modulo II : Análisis exploratorio de datos y automatización de reportes.
+
+Objetivos: 
+	- Desarrollo paso a paso de os diversos gráficos en diversas formas.
+	- Introducción fuerte a la automatización de reportes usando Rmarkdown en formato html, word. 
+	
+Páginas:
+	- htmlwidgets.org : Página de librerías gráficas de R actualizada.
+	- plotly : librería de gráficos interactivos.
+	- highcharter : más gráficos interactivos con elegancia.
+	- data table : librería de tablas interactivas.
+	- dygraph : gráficos interactivos con rangos inferiores y gráficos de área.

@@ -1,0 +1,215 @@
+---
+title: "Gráficos de líneas y  series temporales."
+author: "Jeshua Zyanya Bejarano García"
+date: "2024-05-04"
+output: html_document
+---
+
+```{r}
+library(openxlsx)
+library(ggplot2)
+library(reshape2)
+library(scales)
+library(tidyquant)
+library(xml2)
+```
+
+Ruta de la computadora actual
+```{r}
+# ruta_act <- "C:\\Users\\Owen\\Documentos\\Jeshua\\" # En la mejor máquina que tenemos
+# ruta_act <- "C:\\Users\\Lenovo T440\\Documents" # Nuestra Laptop escolar
+```
+
+
+```{r}
+#file.choose()
+#setwd(ruta_act)
+datos <- read.xlsx("..\\data\\BASE DE DATOS.xlsx",
+                   sheet = "Hoja1",detectDates = T)
+head(datos)
+```
+
+```{r}
+ggplot(data=datos)+
+  aes(x=PERIODO)+
+  aes(y=EXPORTACIONES)+
+  geom_line()+
+  geom_point(color="blue",alpha=0.5,size=1.5) +
+  geom_hline(yintercept = mean(datos$EXPORTACIONES), col = "grey") +  # Línea horizontal de media 
+                                                                     # promedio.
+  geom_vline(xintercept = as.numeric(
+    as.Date(tail(datos$PERIODO,n=1))), linetype=1) +  # Línea vertical al último periodo.
+  geom_vline(xintercept = as.numeric(
+    as.Date(tail(datos$PERIODO,n=13)[1])), linetype=4) + # Línea vertical al periodo 13. tail es una función que devuelve los últimos n periodos, empezando por el más anterior.
+  annotate(geom = "text",
+           x = as.Date(tail(datos$PERIODO,n=1)),
+           y=2000000,
+           label="crisis",angle=90,size=4) + # La pequeña anotación de "crisis" para la última línea.
+  labs(title="Evolución de las exportaciones del Ecuador",
+       subtitle = "En miles de millones",
+       caption = "Fuente: BCE\n Elaboraci?n:autor") + # Etiquetas dadas, título, subtítulo y fuente.
+  theme(text = element_text(size=14),legend.position = "bottom",
+        axis.text.x = element_text(angle = 90, hjust=1,size=9)) + #un poco de cambios en fechas
+  scale_x_date(date_labels = "%Y %b",breaks=datos$PERIODO) # Cambiar la escala y orientación de los ejes con los meses incluídos.
+
+#scale_x_date(date_labels = "%Y %b",breaks = scales::pretty_breaks(n = 12)) # Esta línea tambien puede usarse para colocar las etiquetas.
+```
+
+## Guardando gráficos.
+```{r}
+last_plot()
+ggsave("exportaciones.png", width = 8, height = 5) # Se puede guardar el gráfico con el tamaño deseado.
+dev.off() # Cierre del dispositivo.
+```
+## Gráficas múltiples.
+```{r}
+#file.choose()
+#setwd(ruta_act)
+datos <- read.xlsx("..\\data\\importacionesperu.xlsx",
+                   sheet = "Mensuales",detectDates = T)
+
+str(datos)
+```
+Cambiamos el formato periodo a fecha y redondeamos las variables.
+```{r}
+# Agrupando un poco los datos para poder analizarlos
+datos$periodo <-  seq(as.Date("2014/08/1"), as.Date("2019/05/1"), by = "month")
+datos[,2:6] <- round(datos[,2:6],2)
+```
+
+Para graficar varias variables es importante primero
+transformar la data a tipo panel
+con melt.
+Al usar melt, debemos colocar x, y, fill
+
+```{r}
+melt1 <- melt(datos,id.vars = "periodo"); melt1
+```
+
+Hay dos formas de dividir las variables en paneles
+
+- facet_grid: se usa generalmente para variables discretas, y genera paneles por columnas.
+
+- facet_wrap: mejor opción. permite generar los gráficos en forma rectangular puedes usar scales free para probrar diferencias.
+```{r}
+ggplot(data=melt1,aes(x=periodo,y=value))+
+  geom_line()+facet_grid(.~ variable,scales = "free") #.~variable significa 'todos contra los valores de variable'.
+
+ggplot(data=melt1,aes(x=periodo,y=value))+
+  geom_line()+facet_wrap(.~ variable,scales = "free") # Se puede modificar free por free_x o free_y para liberar los ejes a cada gráfico según la necesidad.
+```
+Podemos cambiar la orientación del gráfico a filas
+```{r}
+ggplot(data=melt1,aes(x=periodo,y=value))+
+  geom_line()+facet_grid(variable ~. ,scales = "free")
+
+ggplot(data=melt1,aes(x=periodo,y=value))+
+  geom_line()+facet_wrap(variable ~. ,scales = "free")
+```
+wrap también puede controlar el número de columnas.
+```{r}
+ggplot(data=melt1,aes(x=periodo,y=value))+
+  geom_line()+facet_wrap(variable ~. ,scales = "free",ncol = 2)
+```
+Usualmentre trabajo con wrap. Agregemos otras cosas adicionales
+```{r}
+ggplot(data=melt1,aes(x=periodo,y=value))+
+  geom_line()+facet_wrap(.~variable  ,scales = "free")+
+  geom_smooth(method="lm")  
+```
+```{r}
+ggplot(data=melt1,aes(x=periodo,y=value))+
+  geom_line()+facet_wrap(.~variable  ,scales = "free")+
+  geom_smooth(se=FALSE, method="lm", colour="black")  
+```
+```{r}
+ggplot(data=melt1,aes(x=periodo,y=value))+
+  geom_line()+facet_wrap(.~variable  ,scales = "free")+
+  geom_smooth(se=FALSE, method="lm", formula=y~1 ,colour="red")
+```
+Probemos con una media m?vil de 3 meses
+```{r}
+ggplot(data=melt1,aes(x=periodo,y=value))+
+  geom_line()+facet_wrap(.~variable ,scales = "free")+
+  geom_smooth(aes(color="promedio"),se=FALSE,
+              method="lm", formula=y~1,show.legend = TRUE)+
+  geom_ma(aes(color="MA(12)"),ma_fun = SMA,
+              n = 12, alpha=0.8, size = 3,
+              show.legend = TRUE)
+```
+```{r}
+ggplot(data=melt1,aes(x=periodo,y=value))+
+  geom_line()+facet_wrap(.~variable ,scales = "free")+
+  geom_smooth(aes(color="promedio"),se=FALSE,
+              method="lm", formula=y~1,show.legend = TRUE)+
+  geom_ma(aes(color="MA(12)"),ma_fun = SMA,
+              n = 12, alpha=0.8,size = 1,
+              show.legend = TRUE)+
+  scale_colour_manual(name = 'legendas', 
+                      values = c('promedio' = 'black',
+                                 'MA(12)' = 'red'),
+                      labels = c('promedio',
+                                 'media movil 12'))
+```
+```{r}
+ggplot(data=melt1,aes(x=periodo,y=value))+
+  geom_line()+facet_wrap(.~variable ,scales = "free")+
+  geom_smooth(aes(color="promedio"),se=FALSE,
+              method="lm", formula=y~1,show.legend = TRUE)+
+  geom_ma(aes(color="MA(12)"),ma_fun = SMA,
+              n = 12,size = 1,
+              show.legend = TRUE)+
+  scale_colour_manual(name = 'legendas', 
+                      values = c('promedio' = 'black',
+                                 'MA(12)' = 'red'),
+                      labels = c('promedio',
+                                 'media movil 12'))+
+  geom_smooth(method="lm")+
+  scale_x_date(date_labels = "%Y %b",breaks="6 months")+
+  theme(legend.position = "bottom",
+                                 axis.text.x = element_text(angle = 90,
+                                                            hjust=1,size=7))
+```
+CORRECCIÓN 1
+En la parte de scale_colour, en values, no hay que colocar el
+nombre de la variable, sino solo el color, según el orden.
+```{r}
+ggplot(data = melt1,aes(x=periodo,y=value))+
+  geom_line()+facet_wrap(variable ~.,scales = "free",ncol=3)+
+  geom_smooth(aes(color="promedio"),se=FALSE,
+              method = "lm",formula=y~1,show.legend = TRUE)+
+  geom_ma(aes(color="MA(12)"),ma_fun = SMA,
+          n=12,size=1,
+          show.legend = TRUE)+
+  scale_colour_manual(name = 'Leyenda',
+                      values = c("red" ,
+                                 "blue"),
+                      labels=c("Promedio",
+                               "Media Móvil 12"))+
+  geom_smooth(method = "lm")+
+  scale_x_date(date_labels = "%Y %b",breaks = "3 months")+
+  theme(legend.position = "bottom",
+        axis.text.x = element_text(angle=90,
+                                   hjust=1,
+                                   size=7))
+```
+
+CORRECCIÓN 2
+Si le da igual controlar los colores, solo debe quitar
+scale_colour y correrlo sin esta función.
+```{r}
+ggplot(data = melt1,aes(x=periodo,y=value))+
+  geom_line()+facet_wrap(variable ~.,scales = "free",ncol=3)+
+  geom_smooth(aes(color="promedio"),se=FALSE,
+              method = "lm",formula=y~1,show.legend = TRUE)+
+  geom_ma(aes(color="MA(12)"),ma_fun = SMA,
+          n=12,size=1,
+          show.legend = TRUE)+
+  geom_smooth(method = "lm")+
+  scale_x_date(date_labels = "%Y %b",breaks = "3 months")+
+  theme(legend.position = "bottom",
+        axis.text.x = element_text(angle=90,
+                                   hjust=1,
+                                   size=7))
+```
+

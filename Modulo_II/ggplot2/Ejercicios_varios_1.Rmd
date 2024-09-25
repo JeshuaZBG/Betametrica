@@ -1,0 +1,106 @@
+---
+title: "Ejercicios varios ggplot"
+author: "Jeshua Zyanya Bejarano García"
+date: "30/05/2024"
+output: html_document
+---
+## R for Data Science, Data visualization, Section 1.2: ggplot calls.
+
+Calling libraries.
+```{r}
+library("tidyverse")
+```
+
+1. How many rows are in penguins? How many columns?
+```{r}
+penguins_df <- palmerpenguins::penguins
+glimpse(penguins_df)
+```
+There are 344 rows in penguins dataframe.
+
+2. What does the bill_depth_mm variable in the penguins data frame describe? Read the help for ?penguins to find out.
+```{r}
+?palmerpenguins::penguins
+```
+bill_depth_mm indicates the bill depth in milimeters.
+
+3. Make a scatterplot of bill_depth_mm vs. bill_length_mm. That is, make a scatterplot with bill_depth_mm on the y-axis and bill_length_mm on the x-axis. Describe the relationship between these two variables.
+```{r}
+ggplot(data=penguins_df, mapping=aes(x=bill_length_mm, y=bill_depth_mm)) + 
+  geom_point()
+```
+
+It seems like there are not relashionship between both variables.
+
+4. What happens if you make a scatterplot of species vs. bill_depth_mm? What might be a better choice of geom?
+```{r}
+ggplot(data=penguins_df, mapping=aes(x=bill_depth_mm, y=species)) + 
+  geom_point()
+```
+We thinka boxplot is a better choice of graph.
+```{r}
+ggplot(data=penguins_df, mapping=aes(x=bill_depth_mm, y=species)) + 
+  geom_boxplot()
+```
+
+5. Why does the following give an error and how would you fix it?
+```{r}
+ggplot(data = penguins_df) + 
+  geom_point()
+```
+The error arise because no axis have written. We need to put two variables as the new axis.
+
+6. What does the na.rm argument do in geom_point()? What is the default value of the argument? Create a scatterplot where you successfully use this argument set to TRUE.
+```{r}
+ggplot(data=penguins_df, mapping=aes(x=bill_length_mm, y=bill_depth_mm)) + 
+  geom_point(na.rm = T)
+```
+na.rm remove silently the existing NA's.
+
+7. Add the following caption to the plot you made in the previous exercise: “Data come from the palmerpenguins package.” Hint: Take a look at the documentation for labs().
+```{r}
+ggplot(data=penguins_df, mapping=aes(x=bill_length_mm, y=bill_depth_mm)) + 
+  geom_point(na.rm = T) + 
+  labs(caption="Data come from the palmerpenguins package.")
+```
+
+8. Recreate the following visualization. What aesthetic should bill_depth_mm be mapped to? And should it be mapped at the global level or at the geom level?
+```{r}
+ggplot(
+  data = penguins_df,
+  mapping = aes(x = flipper_length_mm, y = body_mass_g)
+) +
+  geom_point(na.rm=T, mapping = aes(color = bill_depth_mm)) +
+  geom_smooth(method = "loess")
+```
+Note is important colorying in geom_point for a unified smoothing.
+
+9. Run this code in your head and predict what the output will look like. Then, run the code in R and check your predictions.
+```{r}
+ggplot(
+  data = penguins_df,
+  mapping = aes(x = flipper_length_mm, y = body_mass_g, color = island)
+) +
+  geom_point() +
+  geom_smooth(se = FALSE)
+```
+
+10. Will these two graphs look different? Why/why not?
+```{r}
+ggplot(
+  data = penguins_df,
+  mapping = aes(x = flipper_length_mm, y = body_mass_g)
+) +
+  geom_point() +
+  geom_smooth()
+
+ggplot() +
+  geom_point(
+    data = penguins_df,
+    mapping = aes(x = flipper_length_mm, y = body_mass_g)
+  ) +
+  geom_smooth(
+    data = penguins_df,
+    mapping = aes(x = flipper_length_mm, y = body_mass_g)
+  )
+```

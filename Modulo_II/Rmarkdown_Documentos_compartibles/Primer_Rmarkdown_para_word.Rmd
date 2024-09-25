@@ -1,0 +1,93 @@
+---
+title: "Primer reporte usando Rmarkdown"
+author: "Jeshua Zyanya Bejarano García"
+date: "10/05/2024"
+output:
+  html_document:
+    df_print: paged
+---
+
+```{r librerias, echo=FALSE,message=FALSE,warning=FALSE,comment=""}
+library(openxlsx)
+library(ggplot2)
+library(reshape2)
+library(lubridate)
+library(dplyr)
+library(gganimate)
+library(animation)
+library(dygraphs)
+library(forecast)
+```
+
+```{r basededatos, echo=FALSE,message=FALSE,warning=FALSE,comment=""}
+datos <- read.xlsx("~\\Libros_cursos_Estadística\\Betamétrica\\M2_AnálisisExporatorio_AutomatizaciónReportes\\data\\importacionesperu.xlsx",
+                   sheet = "Mensuales",detectDates = T)
+
+datos$periodo <-seq(as.Date("2014/08/01"),as.Date("2019/05/01"), by="month") 
+magrupados2 <- melt(datos,id.vars = c("periodo"))
+```
+
+```{r graficolinea, echo=FALSE,message=FALSE,warning=FALSE,comment="",fig.width=16,fig.height=8,fig.align='center'}
+
+ggplot(data=magrupados2, aes(x=periodo,y=value))+
+  geom_line()+facet_wrap(.~variable,scales="free")+
+  theme(text = element_text(size=22))
+```
+
+```{r graficogif, echo=TRUE,message=FALSE,warning=FALSE,comment="",fig.width=16,fig.height=8,fig.align='center',eval=FALSE}
+
+animado <- ggplot(data=magrupados2, aes(x=periodo,y=value))+
+  geom_line()+facet_wrap(.~variable,scales="free")+
+  theme(text = element_text(size=22))
+animado <- animado+transition_reveal(along=periodo)
+animado
+```
+
+```{r graficodinamico, echo=TRUE,message=FALSE,warning=FALSE,comment="",fig.width=8,fig.height=8,fig.align='center',results='asis'}
+
+datosdy <- datos %>% select(BienesConsumo,MateriaPrima,BienesCapital)
+
+tsdatos <- ts(datosdy, start=c(2014,8), frequency=12)
+
+dygraph(tsdatos,main="Evolución de las Importaciones de Perú", xlab="Periodo", ylab="Millones de soles.") %>% dyOptions(fillGraph=T,fillAlpha=0.04,drawPoints=T,pointSize=3)
+
+```
+
+Las importaciones de bienes de consumo experimentan una tendencia decreciente, explicada, por la depreciación de la moneda (soles) y otros factores internos como la desaceleración de la economía.
+
+Estos son los resultados de nuestro pronóstico 4 datos fuera de la muestra:
+
+```{r otrascosas, echo=TRUE,message=FALSE,warning=FALSE,comment="",fig.width=16,fig.height=8,fig.align='center'}
+
+modelo <- auto.arima(datos$BienesConsumo)
+fmodelo <- forecast(modelo,4)
+autoplot(fmodelo)
+
+if( ( ((tail(datos$BienesConsumo,n=13)[13]/tail(datos$BienesConsumo,n=13)[1])-1)*100 )>0 ){
+cat("Respecto del año pasado las importaciones experimentaron una tasa de crecimiento del :", ((tail(datos$BienesConsumo,n=13)[13]/tail(datos$BienesConsumo,n=13)[1])-1)*100,"%")
+}else{
+  cat("Respecto del año pasado las importaciones experimentaron una tasa de decrecimiento del :", ((tail(datos$BienesConsumo,n=13)[13]/tail(datos$BienesConsumo,n=13)[1])-1)*100,"%")
+
+}
+```
+
+
+## R Markdown
+
+This is an R Markdown document. Markdown is a simple formatting syntax for authoring HTML, PDF, and MS Word documents. For more details on using R Markdown see <http://rmarkdown.rstudio.com>.
+
+When you click the **Knit** button a document will be generated that includes both content as well as the output of any embedded R code chunks within the document. You can embed an R code chunk like this:
+
+```{r cars}
+summary(cars)
+```
+
+## Including Plots
+
+You can also embed plots, for example:
+
+```{r pressure, echo=FALSE}
+plot(pressure)
+```
+
+Note that the `echo = FALSE` parameter was added to the code chunk to prevent printing of the R code that generated the plot.

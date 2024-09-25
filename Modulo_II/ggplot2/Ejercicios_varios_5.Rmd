@@ -1,0 +1,202 @@
+---
+title: "Ejercicios varios 5"
+author: "Jeshua Zyanya Bejarano García"
+date: "2024-06-02"
+output: html_document
+---
+
+## R for Data Science, [Layers](https://r4ds.hadley.nz/layers).
+
+If the graph we want can not be made by the usual ggplot geoms, visit [this site]( https://exts.ggplot2.tidyverse.org/gallery/)
+
+A comprensive overview for all geoms in [this site]( https://ggplot2.tidyverse.org/reference.)
+
+Calling libraries.
+```{r}
+library(tidyverse)
+library(ggridges)
+```
+
+## Facets. 
+
+9.4.1 What happens if you facet on a continuous variable?
+```{r}
+head(mpg)
+ggplot(mpg, mapping=aes(x=cty,y=hwy))+
+  geom_point() +
+  facet_grid(displ~. ,scales="free")
+```
+9.4.2. What do the empty cells in the plot below with facet_grid(drv ~ cyl) mean? 
+```{r}
+ggplot(mpg, aes(x = displ, y = hwy)) + 
+  geom_point() + 
+  facet_grid(drv ~ cyl, scales = "free")
+```
+Run the following code. How do they relate to the resulting plot?
+```{r}
+ggplot(mpg) + 
+  geom_point(aes(x = drv, y = cyl))
+```
+9.4.3. What plots does the following code make? What does . do?
+```{r}
+ggplot(mpg) + 
+  geom_point(aes(x = displ, y = hwy)) +
+  facet_grid(drv ~ .)
+
+ggplot(mpg) + 
+  geom_point(aes(x = displ, y = hwy)) +
+  facet_grid(. ~ cyl)
+```
+9.4.4. Take the first faceted plot in this section:
+```{r}
+ggplot(mpg) + 
+  geom_point(aes(x = displ, y = hwy)) + 
+  facet_wrap(~ cyl, nrow = 2)
+```
+What are the advantages to using faceting instead of the color aesthetic? What are the disadvantages? How might the balance change if you had a larger dataset?
+
+9.4.5. Read ?facet_wrap. What does nrow do? What does ncol do? What other options control the layout of the individual panels? Why doesn’t facet_grid() have nrow and ncol arguments?
+```{r}
+?facet_wrap
+?facet_grid
+```
+
+9.4.6. Which of the following plots makes it easier to compare engine size (displ) across cars with different drive trains? What does this say about when to place a faceting variable across rows or columns?
+```{r}
+ggplot(mpg, aes(x = displ)) + 
+  geom_histogram() + 
+  facet_grid(drv ~ .)
+
+ggplot(mpg, aes(x = displ)) + 
+  geom_histogram() +
+  facet_grid(. ~ drv)
+```
+9.4.7. Recreate the following plot using `facet_wrap()` instead of `facet_grid()`. How do the positions of the facet labels change?
+```{r}
+ggplot(mpg) + 
+  geom_point(aes(x = displ, y = hwy)) +
+  facet_grid(drv ~ .)
+```
+```{r}
+ggplot(mpg) + 
+  geom_point(aes(x = displ, y = hwy)) +
+  facet_wrap(drv ~ .)
+```
+## Statistical transformations.
+
+9.5.1.1 What is the default geom associated with stat_summary()? How could you rewrite the next plot to use that geom function instead of the stat function?
+```{r}
+ggplot(diamonds) + 
+  stat_summary(
+    aes(x = cut, y = depth),
+    fun.min = min,
+    fun.max = max,
+    fun = median
+  )
+```
+
+```{r}
+?stat_summary
+```
+The asociated geom is `pointrange`. We can make the above graph with geom_pointrange
+```{r}
+ggplot(data = diamonds)+
+  geom_pointrange(
+    mapping = aes(x = cut, y = depth),
+    fun.min = min,
+    fun.max = max,
+    fun = median,
+    stat = "summary"
+  )
+```
+9.5.1.2 What does geom_col() do? How is it different from geom_bar()?
+```{r}
+?geom_col
+```
+eom_bar() makes the height of the bar proportional to the number of cases in each group (or if the weight aesthetic is supplied, the sum of the weights). If you want the heights of the bars to represent values in the data, use geom_col() instead. geom_bar() uses stat_count() by default: it counts the number of cases at each x position. geom_col() uses stat_identity(): it leaves the data as is.
+
+9.5.1.3 Most geoms and stats come in pairs that are almost always used in concert. Make a list of all the pairs. What do they have in common? (Hint: Read through the documentation.)
+R. 
+
+We reference this [link](https://ggplot2.tidyverse.org/reference/layer_stats.html) answering the question.
+The following stats and geoms are releated:
+- geom_violin() and stat_ydensity()
+- geom_histogram() and stat_bin()
+- geom_contour() and stat_contour()
+- geom_function() and stat_function()
+- geom_bin_2d() and stat_bin_2d()
+- geom_boxplot() and stat_boxplot()
+- geom_count() and stat_sum()
+- geom_density() and stat_density()
+- geom_density_2d() and stat_density_2d()
+- geom_hex() and stat_binhex()
+- geom_quantile() and stat_quantile()
+- geom_smooth() and stat_smooth()
+
+9.5.1.4 What variables does stat_smooth() compute? What arguments control its behavior?
+```{r}
+?stat_smooth
+```
+There are not many differences between geom_smooth and stat_smooth.
+
+9.5.1.5 In our proportion bar chart, we needed to set group = 1. Why? In other words, what is the problem with these two graphs?
+```{r}
+ggplot(diamonds, aes(x = cut, y = after_stat(prop), group = 1)) + 
+  geom_bar()
+```
+```{r}
+ggplot(diamonds, aes(x = cut, fill = color, y = after_stat(prop)) ) + 
+  geom_bar()
+```
+The first graph needs the adjustment of group = 1. In other case, it'll be displayed with constants bars.
+
+## Position aligment.
+
+9.6.1 What is the problem with the following plot? How could you improve it?
+```{r}
+ggplot(mpg, aes(x = cty, y = hwy)) + 
+  geom_point()
+```
+There is a problem of overploting. We fix that with the following
+```{r}
+ggplot(mpg, aes(x = cty, y = hwy)) + 
+  geom_point(position = "jitter")
+```
+9.6.2 What, if anything, is the difference between the two plots? Why?
+```{r}
+ggplot(mpg, aes(x = displ, y = hwy)) +
+  geom_point()
+```
+```{r}
+ggplot(mpg, aes(x = displ, y = hwy)) +
+  geom_point(position = "identity")
+```
+There is no difference between the two graphs.
+
+9.6.3 What parameters to geom_jitter() control the amount of jittering?
+```{r}
+?geom_jitter
+```
+Attribute wdth controls amount of spread for jitter.
+```{r}
+ggplot(mpg, aes(x = cty, y = hwy)) + 
+  geom_jitter(width=10)
+```
+9.6.4 Compare and contrast geom_jitter() with geom_count().
+```{r}
+ggplot(mpg, aes(x = cty, y = hwy)) + 
+  geom_jitter()
+```
+```{r}
+ggplot(mpg, aes(x = cty, y = hwy)) + 
+  geom_count()
+```
+9.6.5 What’s the default position adjustment for geom_boxplot()? Create a visualization of the mpg dataset that demonstrates it.
+```{r}
+?geom_boxplot
+```
+The defaut position of boxplot is dodge2.
+```{r}
+ggplot(mpg, aes(x = drv, y = hwy)) + 
+  geom_boxplot()
+```

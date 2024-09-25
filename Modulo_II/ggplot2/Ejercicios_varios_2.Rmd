@@ -1,0 +1,37 @@
+---
+title: "Ejercicios varios ggplot 2"
+author: "Jeshua Zyanya Bejarano García"
+date: "2024-05-30"
+output: html_document
+---
+## R for Data Science, Data visualization, Section 1.4: Visualizing distributions.
+
+Calling libraries.
+```{r}
+library("tidyverse")
+penguins_df <- palmerpenguins::penguins
+```
+
+1. Make a bar plot of species of penguins, where you assign species to the y aesthetic. How is this plot different?
+```{r}
+ggplot(data = penguins_df, mapping=aes(y = fct_infreq(species))) +
+  geom_bar()
+```
+
+2. How are the following two plots different? Which aesthetic, color or fill, is more useful for changing the color of bars?
+```{r}
+ggplot(penguins_df, aes(x = species)) +
+  geom_bar(color = "red")
+
+ggplot(penguins_df, aes(x = species)) +
+  geom_bar(fill = "red")
+```
+3. What does the bins argument in geom_histogram() do?
+
+R. They divide the variable in equal parts to graph the histogram.
+
+4. Make a histogram of the carat variable in the diamonds dataset that is available when you load the tidyverse package. Experiment with different binwidths. What binwidth reveals the most interesting patterns?
+```{r}
+ggplot(data = diamonds, mapping=aes(x=carat))+
+  geom_histogram(binwidth=0.01)
+```

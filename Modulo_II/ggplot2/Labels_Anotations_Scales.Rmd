@@ -1,0 +1,196 @@
+---
+title: "Labels, Anotations,Scales."
+author: "Jeshua Zyanya Bejarano García"
+date: "2024-06-27"
+output: html_document
+---
+
+Llamado de librerías.
+```{r message=FALSE, warning=FALSE}
+library(tidyverse)
+library(scales)
+library(ggrepel)
+library(patchwork)
+```
+
+## Labels
+
+11.2.1. Create one plot on the fuel economy data with customized title, subtitle, caption, x, y, and color labels.
+```{r}
+ggplot(mpg, aes(x = displ, y = hwy)) +
+  geom_point(aes(color = class)) +
+  geom_smooth(se = FALSE) +
+  labs(
+    x = "Engine displacement (L)",
+    y = "Highway fuel economy (mpg)",
+    color = "Car type",
+    title = "Fuel efficiency generally decreases with engine size",
+    subtitle = "Two seaters (sports cars) are an exception because of their light weight",
+    caption = "Data from fueleconomy.gov"
+  )
+```
+11.2.2. Recreate the following plot using the fuel economy data. Note that both the colors and shapes of points vary by type of drive train.
+```{r}
+ggplot(mpg, aes(x = cty, y = hwy)) +
+  geom_point(aes(color = drv, shape=drv)) +
+  labs(
+    x = "City MPG",
+    y = "Highway MPG",
+    color = "Type of drive train",
+    shape = "Type of drive train"
+  )
+```
+
+## Annotations.
+
+11.3.1. Use geom_text() with infinite positions to place text at the four corners of the plot.
+```{r}
+label_info <- mpg |>
+  group_by(drv) |>
+  arrange(desc(displ)) |>
+  slice_head(n = 1) |>
+  mutate(
+    drive_type = case_when(
+      drv == "f" ~ "front-wheel drive",
+      drv == "r" ~ "rear-wheel drive",
+      drv == "4" ~ "4-wheel drive"
+    )
+  ) |>
+  select(displ, hwy, drv, drive_type)
+
+four_corners <- data.frame(
+  x_i = c(2,6.7,2,6.7),
+  y_i = c(50,10,10,50),
+  lab = c("1st corner","2nd corner", "3th corner", "4th corner")
+)
+
+ggplot(mpg, aes(x = displ, y = hwy)) +
+  geom_point(alpha = 0.3, aes(color = drv)) +
+  geom_smooth(se = FALSE, aes(color = drv)) +
+  geom_text(
+    data = label_info, 
+    aes(x = displ, y = hwy, label = drive_type, color = drv),
+    fontface = "bold", size = 5, hjust = "right", vjust = "bottom"
+  ) + 
+  geom_text(
+    data=four_corners,
+    aes(x=x_i,y=y_i,label=lab),
+    fontface = "bold", size = 3, hjust = "center", vjust = "bottom"
+  ) +
+  theme(legend.position = "none")
+```
+
+11.3.2. Use annotate() to add a point geom in the middle of your last plot without having to create a tibble. Customize the shape, size, or color of the point.
+```{r}
+ggplot(mpg, aes(x = displ, y = hwy)) +
+  geom_point(alpha = 0.3, aes(color = drv)) +
+  geom_smooth(se = FALSE, aes(color = drv)) +
+  geom_text(
+    data = label_info, 
+    aes(x = displ, y = hwy, label = drive_type, color = drv),
+    fontface = "bold", size = 5, hjust = "right", vjust = "bottom"
+  ) +
+annotate(
+    geom = "point",
+    x = 4.2, y = 30, size=7,color = "red")+
+annotate(
+    geom = "point",
+    x = 4.2, y = 30, size=9, shape="circle open",color = "red")
+  theme(legend.position = "none")
+```
+
+11.3.3. How do labels with geom_text() interact with faceting? How can you add a label to a single facet? How can you put a different label in each facet? (Hint: Think about the dataset that is being passed to geom_text().)
+```{r}
+ggplot(mpg, aes(x = displ, y = hwy)) + 
+  geom_point() + 
+  facet_grid(drv ~ cyl, scales = "free") 
+```
+We'll construct a new data frame where the labels will be positionated acording to the empty spaces of every facet.
+```{r}
+label_info_2 <- mpg %>% select(hwy,displ,drv,cyl) %>% 
+  filter( cyl %in% c(4,6,8) ) %>% 
+  group_by(drv) %>% mutate( media_hwy = format(mean(hwy),digits=4),.keep = "unused" ) %>% 
+  slice_head(n = 1) %>% select(-displ) %>% 
+  cbind( coor_x = c(2.15,2.5,6.5), coor_y = c(20,35,21), .); label_info_2
+```
+This data frame will put the labels in our facet.
+```{r}
+ggplot(mpg, aes(x = displ, y = hwy)) + 
+  geom_point() + 
+  facet_grid(drv ~ cyl, scales = "free") +
+  geom_text(
+    data=label_info_2, 
+    aes(x = coor_x, y = coor_y, label = media_hwy),
+    fontface = "bold", size = 2.5, hjust = "center", vjust = "bottom"
+    )
+```
+
+11.3.4. What arguments to geom_label() control the appearance of the background box?
+```{r}
+ggplot(mpg, aes(x = displ, y = hwy, color = drv)) +
+  geom_point(alpha = 0.3) +
+  geom_smooth(se = FALSE) +
+  geom_label(
+    data = label_info, 
+    aes(x = displ, y = hwy, label = drive_type),
+    fontface = "bold", size = 3, hjust = "right", vjust = "bottom"
+  ) +
+  theme(legend.position = "none")
+```
+```{r}
+?geom_label
+```
+The argunments that change the appparence of the label are label.padding, label.r and label.size.
+For units using label.padding, check out [this link](https://www.rdocumentation.org/packages/grid/versions/3.6.2/topics/unit).
+```{r}
+ggplot(mpg, aes(x = displ, y = hwy, color = drv)) +
+  geom_point(alpha = 0.3) +
+  geom_smooth(se = FALSE) +
+  geom_label(
+    data = label_info, 
+    aes(x = displ, y = hwy, label = drive_type),
+    fontface = "bold", size = 3, hjust = "right", vjust = "bottom", label.padding = unit(0.1,"cm"), 
+    label.r = unit(0.7, "lines"), label.size = 1.5
+  ) +
+  theme(legend.position = "none")
+```
+
+11.3.5. What are the four arguments to arrow()? How do they work? Create a series of plots that demonstrate the most important options.
+```{r}
+?arrow
+```
+```{r}
+trend_text <- "Larger engine sizes tend to have lower fuel economy." |>
+  str_wrap(width = 30)
+
+ggplot(mpg, aes(x = displ, y = hwy)) +
+  geom_point() +
+  annotate(
+    geom = "label", x = 3.5, y = 38,
+    label = trend_text,
+    hjust = "left", color = "red"
+  ) +
+  annotate(
+    geom = "segment",
+    x = 3, y = 35, xend = 5, yend = 25, color = "red",
+    arrow = arrow(type = "closed")
+  )
+```
+Arrow has four attributes, angle, length, ends and type. We will prove each one here. Angle narrow or expand the head of arrow, their length is controlled by the same attribute name. Ends points where the head of arrow should be.
+```{r}
+ggplot(mpg, aes(x = displ, y = hwy)) +
+  geom_point() +
+  annotate(
+    geom = "label", x = 3.5, y = 38,
+    label = trend_text,
+    hjust = "left", color = "red"
+  ) +
+  annotate(
+    geom = "segment",
+    x = 3, y = 35, xend = 5, yend = 25, color = "red",
+    arrow = arrow(angle=50, length=unit(0.25, "inches"), ends="both",type = "open")
+  )
+```
+
+## Scales.
+

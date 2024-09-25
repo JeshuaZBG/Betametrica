@@ -1,0 +1,57 @@
+######
+## ggplot2
+
+## Grámatica de ggplot2. 
+La idea de la utilización de ggplot usando gramática de capas es trabajando en capas.
+
+	1. Data: 
+		- Código natural
+		- Dplyr
+	2. Estética:
+		- Variable x,y.
+		- Colores.
+		- Agrupaciones.
+	3. Geometrías:
+		- Líneas, barras, pastel, puntos.
+		- Boxplot, densidad de distribución.
+		- Texto, anotaciones, líneas.
+	4. Complementos:
+		- Estadísticas.
+		- Facetas.
+		- Temas.
+		- Coordenadas, posiciones, escalas, posiciones.
+
+
+## Argumentos que acompañan a las geometrías.
+	- color: Para colorear líneas y puntos.
+	- alpha: transparencia 0(más transparente) a 1(menos transparencia).
+	- size: Tamaño de líneas y puntos (grueso o fino).
+	- fill: relleno o colorear dentro de puntos, barras o intervalos.
+
+## Geometrías usuales.
+	- geom_line
+	- geom_point
+	- geom_bar
+	- geom_area
+	- geom_area
+
+## Geometrías como complementos:
+	- geom_smoth
+	- geom_text
+	- geom_vline
+	- geom_hline
+
+Para conocer más geometrías o más estadísticas
+	apropos("^geom_")
+	apropos("^stat_")
+
+
+## Forma usual en ggplot
+ggplot(data = <DATA>) + 
+  <GEOM_FUNCTION>(
+     mapping = aes(<MAPPINGS>),
+     stat = <STAT>, 
+     position = <POSITION>
+  ) +
+  <COORDINATE_FUNCTION> +
+  <FACET_FUNCTION>

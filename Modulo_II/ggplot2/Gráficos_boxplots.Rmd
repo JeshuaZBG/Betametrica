@@ -1,0 +1,72 @@
+---
+title: "Boxplots"
+author: "Jeshua Zyanya Bejarano García"
+date: "2024-05-10"
+output: html_document
+---
+Llamamos las librerías.
+```{r setup, include=FALSE}
+library(openxlsx)
+library(ggplot2)
+library(reshape2)
+library(lubridate)
+library(dplyr)
+```
+Importamos los datos.
+```{r}
+datos <- read.xlsx("~\\Libros_cursos_Estadística\\Betamétrica\\M2_AnálisisExporatorio_AutomatizaciónReportes\\data\\importacionesperu.xlsx",
+                   sheet = "Mensuales",detectDates = T)
+
+str(datos)
+```
+Agrupando un poco los datos para poder analizarlos
+```{r}
+datos$periodo <-  seq(as.Date("2014/08/1"), as.Date("2019/05/1"), by = "month")
+
+datosagrupados <- datos %>%
+  mutate(anio=year(periodo),
+         mes=month(periodo))%>%
+  select(anio,mes,everything())%>%
+  select(-Total,-periodo)%>%
+  #filter(mes<=tail(mes,n=1))%>%
+  group_by(anio)
+```
+
+Para barras stacked
+x, y, fill si hay varias variables, es probable que se deba usar la función melt de la librería reshape2.
+```{r}
+magrupados <- melt(datosagrupados,id.vars = c("anio","mes"))
+```
+
+Graficamos un primer intento el boxplot.
+```{r}
+ggplot(magrupados,aes(x=anio,y=value,fill=variable))+
+  geom_boxplot()+facet_wrap(~variable,scales = "free")+
+  theme(legend.position = "bottom")
+```
+
+Guardamos nuestro gráfico.
+```{r}
+last_plot()
+ggsave("importacionesstack.png", width = 8, height = 8)
+```
+
+Cambiando el facet para analizar por anio, donde las x son las variables. 
+Agregemos jitter generar una aleatoriedad en los datos y se los pueda visualizar como dispersión.
+```{r}
+ggplot(magrupados,aes(x=variable,y=value,fill=variable))+
+  geom_boxplot()+
+  geom_jitter(width=0.1,alpha=0.2)+
+  facet_wrap(~anio,scales = "free")+
+  theme(legend.position = "bottom",
+        axis.text.x = element_text(angle=90,hjust = 1))
+```
+Veamos cuando las x son anios y el facet es por variable.
+es decir, generemos el boxplot por anio, separando por variable en el encabezado del gráfico.
+```{r}
+ggplot(magrupados,aes(x=factor(anio),y=value))+
+  geom_boxplot(aes(fill=variable))+facet_wrap(~variable,scales = "free")+
+                 geom_jitter(width=0.1,alpha=0.2,aes(color=variable))+
+  theme(legend.position = "none", axis.text.x = element_text(angle = 90, hjust = 1))
+```
+Mucho mejor!

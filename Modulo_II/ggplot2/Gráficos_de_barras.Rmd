@@ -1,0 +1,155 @@
+---
+title: "Gráficos de barras"
+author: "Jeshua Zyanya Bejarano García"
+date: "2024-05-08"
+output: html_document
+---
+
+```{r}
+library(openxlsx)
+library(ggplot2)
+library(reshape2)
+library(dplyr)
+library(lubridate)
+```
+
+```{r}
+datos <- read.xlsx("..\\data\\BASE DE DATOS.xlsx",
+                   sheet = "Hoja1",detectDates = T)
+head(datos)
+```
+## Gráfico de barras no apiladas horizontales.
+
+```{r}
+ggplot(data=datos)+
+  aes(x=PERIODO)+
+  aes(y=EXPORTACIONES)+
+  geom_bar(position = "dodge",stat="identity") # position dodge es una barra al lado de otra, stat es lo que se va a colocar los valores propios del data frame.
+```
+Agrupando un poco los datos para poder analizarlos
+```{r}
+datos <- datos %>%
+         mutate(anio=year(datos$PERIODO),
+                mes=month(datos$PERIODO)) %>%
+         select(anio,mes, everything())  
+
+
+datosagrupados <- datos %>%
+                  filter(mes<=tail(datos$mes,n=1))%>% # Recordar que tail devuelve el último valor                                                     disponible del data frame datos (en este caso)
+                  select(-PERIODO)%>%
+                  mutate(anio=as.numeric(anio))%>%
+                  group_by(anio)%>%
+                  summarise_each(list(sum))
+
+datosagrupados <- round(datosagrupados,2)
+```
+Construímos el gráfico de barras.
+```{r}
+ggplot(data=datosagrupados)+
+  aes(x=anio)+
+  aes(y=EXPORTACIONES)+
+  geom_bar(position = "dodge",stat="identity")+
+  geom_text(aes(label=EXPORTACIONES), vjust=0, color="black", size=3)+ # Aquí editamos el texto de las etiquetas que iran encima de las barras. vjust=0 ajusta en vertical el texto.
+  labs(title="Evolución de las exportaciones del Ecuador", # Añadimos el título, el sub y el                                                                   caption
+       subtitle = "En miles de millones",
+       caption = "Fuente: BCE\n Elaboraci?n:autor")
+```
+Guardamos el gráfico de barras.
+```{r}
+last_plot()
+ggsave("exportacionesbarra.png", width = 8, height = 5)
+```
+
+## Gráfico de barras no apiladas en vertical.
+
+```{r}
+ggplot(data=datosagrupados)+
+  aes(x=anio)+
+  aes(y=EXPORTACIONES)+
+  geom_bar(position = "dodge",stat="identity")+coord_flip()+ # coord_flip orienta en vertical.
+  geom_text(aes(label=EXPORTACIONES), vjust=0, color="black", size=4,
+            position = position_dodge(width = 1), # Se coloca el texto uno junto al otro.
+            angle=270)+
+  labs(title="Evoluci?n de las exportaciones del Ecuador",
+       subtitle = "En miles de millones",
+       caption = "Fuente: BCE\n Elaboraci?n:autor")
+```
+Guardamos el gráfico.
+```{r}
+last_plot()
+ggsave("exportacionesbarraflip.png", width = 8, height = 8)
+```
+
+
+## Gráficos de barras apiladas.
+
+Mandamos a llamar a los datos.
+```{r}
+datos <- read.xlsx("..\\data\\importacionesperu.xlsx",
+                   sheet = "Mensuales",detectDates = T)
+
+str(datos)
+```
+Agrupando un poco los datos para poder analizarlos
+```{r}
+datos$periodo <-  seq(as.Date("2014/08/1"), as.Date("2019/05/1"), by = "month")
+
+datos <- datos %>%
+  mutate(anio=year(datos$periodo),
+         mes=month(datos$periodo)) %>%
+  select(anio,mes, everything())
+
+datosagrupados1 <- datos %>%
+  filter(mes<=tail(datos$mes,n=1))%>%
+  select(-periodo,-mes,-Total)%>%
+  mutate(anio=as.numeric(anio))%>%
+  group_by(anio)%>%
+  summarise_each(list(sum))
+
+datosagrupados1 <- round(datosagrupados1,2)
+```
+
+para barras stacked x, y, fill.
+Si hay varias variables, es probable que se deba usar la funci?n melt
+de la librer?a reshape2
+
+```{r}
+melt1 <- melt(datosagrupados1,id.vars = "anio")
+```
+Graficamos
+```{r}
+ggplot(melt1, aes(x = anio, y = value, fill = variable)) + 
+  geom_bar(stat = "identity")+   # stat = identity muestra los valores correpondientes a los valores que se encuentran dentro del df metl1. Esto junto con fill="identity" genera las barras apiladas.
+  geom_text(aes(y=value, label=value),  # Colocamos los valores dentro de cada stack
+            position = position_stack(vjust = 0.5),
+            size=4)+
+  labs(title="Evolución de las importaciones del Perú", # Colocamos los títulos, subs y captions.
+       subtitle = "En millones de pesos, acumulados de Enero a (fecha de corte)",
+       caption = "Fuente: BCP\n Elaboración:autor",
+       x="periodo acumulado",y="millones de soles")
+```
+Guardamos el gráfico.
+```{r}
+last_plot()
+ggsave("importacionesstack.png", width = 8, height = 8)  
+```
+
+Basta colocar un coor_flip para voltear las barras
+```{r}
+ggplot(melt1, aes(x = anio, y = value, fill = variable)) + 
+  geom_bar(stat = "identity")+coord_flip()+
+  geom_text(aes(y=value, label=value),
+            position = position_stack(vjust = 0.5),
+            size=4)+
+  labs(title="Evolución de las importaciones del Perú",
+       subtitle = "En millones de pesos, acumulados de Enero a (fecha de corte)",
+       caption = "Fuente: BCP\n Elaboraci?n:autor",
+       x="periodo acumulado",y="millones de soles")+
+  scale_fill_brewer(palette = "Spectral")+theme_minimal()
+```
+Guardamos el gráfico.
+```{r}
+last_plot()
+ggsave("importacionesstackflip.png", width = 8, height = 8) 
+```
+
