@@ -1,0 +1,106 @@
+---
+title: "Ejercicio de Fin de Módulo II"
+author: "Jeshua Zyanya Bejarano García"
+date: "2024-09-26"
+output: github_document
+---
+
+Llamamos las librerias a utilzar.
+```{r}
+library(openxlsx)
+library(ggplot2)
+library(reshape2)
+library(dplyr)
+library(lubridate)
+library(fpp3)
+library(scales)
+library(gganimate)
+library(animation)
+library(dygraphs)
+```
+
+Cargamos nuestras bases de datos.
+```{r}
+BMon_Circ_Dep <- read.xlsx("data/BaseMonetaria_Circulante_Depósito.xlsx",startRow = 18, colNames = T,detectDates=T)
+Billetes_Monedas <- read.xlsx("data/BilletesMonedas_en_circulación.xlsx",startRow = 18, colNames = T,detectDates=T)
+```
+
+Transformamos nuestros datos para acomodarlos.
+```{r}
+BMon_Circ_Dep <- BMon_Circ_Dep %>% 
+  mutate(Fecha = yearmonth(Fecha)) %>%
+  group_by(Fecha) %>% 
+  summarise(
+    "Base monetaria" = sum(SF43695),
+    "Billetes y monedas en circulación" = sum(SF43702),
+    "Depósitos bancarios en cuenta corriente" = sum(SF43696)
+    ) %>% 
+  as_tsibble(index=Fecha); head(BMon_Circ_Dep)
+```
+```{r}
+Billetes_Monedas <- Billetes_Monedas %>% 
+  mutate(Fecha = yearmonth(Fecha),
+         "Billetes y monedas en circulación" = as.numeric(SF1),
+         "Público" = as.numeric(SF4),
+         "En caja de bancos" = as.numeric(SF5),
+         .keep = "none"
+         ) %>% 
+  as_tsibble(index=Fecha); head(Billetes_Monedas)
+```
+
+Graficamos un par de Boxplots de los billetes y monedas en circulación al público mexicano y en cajas.
+```{r}
+Billetes_Monedas %>% melt(id.vars = "Fecha") %>% 
+  filter(variable=="Público" | variable=="En caja de bancos") %>% 
+  ggplot(aes(x=variable,y=value,fill=variable)) +
+  geom_boxplot() +
+  labs(title="Billetes y monedas en circulación en México (2000-2024)",
+       x="",
+       y="Miles de $mxn")+
+  scale_y_continuous(labels=label_comma()) +
+  theme(legend.position = "none")
+```
+Construímos dos gráficos de barras para las mismas variables a lo largo del tiempo. 
+```{r}
+Billetes_Monedas %>% melt(id.vars = "Fecha") %>%
+  filter(variable=="Público" | variable=="En caja de bancos") %>% 
+  ggplot(aes(x=Fecha,y=value)) +
+  geom_bar(position = "dodge",stat="identity") + 
+  facet_grid(variable~.,scales="free") + 
+  labs(title="Billetes y monedas en circulación en México",
+       subtitle="2000-2024",
+       x="",
+       y="Miles de $mxn") +
+  scale_y_continuous(labels=label_comma())
+```
+
+Graficamos la base monetaria mexicana: los billetes y monedas en circulación y los depósito bancarios en cuenta corriente.
+```{r fig.height=6}
+BMon_Circ_Dep %>% melt(id.vars = "Fecha") %>%
+  filter(variable!="Base monetaria") %>% 
+  ggplot(aes(x=Fecha,y=value)) +
+  geom_line() + 
+  facet_grid(variable~.,scales="free") + 
+  labs(title="Base monetaria en México",
+       subtitle="2000-2024",
+       x="",
+       y="Millones de $mxn")+
+  geom_smooth(method="loess") + 
+  scale_y_continuous(labels=label_comma())
+```
+
+Graficamos lo de arriba sin la tendencia y con animación.
+```{r}
+BMon_Circ_Dep %>% melt(id.vars = "Fecha") %>%
+  filter(variable!="Base monetaria") %>% 
+  ggplot(aes(x=as.Date(Fecha),y=value)) +
+  geom_line() + 
+  facet_grid(variable~.,scales="free") + 
+  labs(title="Base monetaria en México",
+       subtitle="2000-2024",
+       x="",
+       y="Millones de $mxn") +
+  scale_y_continuous(labels=label_comma()) +
+  transition_reveal(along=as.Date(Fecha))
+```
+
