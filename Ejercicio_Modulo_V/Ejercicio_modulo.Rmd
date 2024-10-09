@@ -1,0 +1,128 @@
+---
+title: "Ejercicio de módulo"
+author: "Jeshua Zyanya Bejarano García"
+date: "2024-10-09"
+output: github_document
+---
+
+```{r}
+library(openxlsx)
+library(tidyverse)
+library(cluster)
+library(devtools)
+library(factoextra)
+library(gridExtra)
+library(NbClust)
+```
+
+```{r}
+indicadores <- read.xlsx( "BOL_BP_MAY_ 2017.xlsx",colNames=T, startRow = 8, rows=c(8,15,33,54,59,88), sheet="INDICADORES" )[-1]; head(indicadores)
+```
+
+Convertimos la tabla a un formato largo.
+```{r}
+indicadores %>% select(-BANCOS.PRIVADOS.VIVIENDA) %>% 
+  pivot_longer(!NOMBRE.DEL.INDICADOR,names_to="Bancos",values_to="n") %>% 
+  pivot_wider(names_from=NOMBRE.DEL.INDICADOR,values_from=n) %>% 
+  as.data.frame() -> indicadores; head(indicadores)
+```
+
+Asignamos los nombres de las filas a nuestro data frame.
+```{r}
+names <- indicadores[1]
+indicadores <- indicadores[-1]
+row.names(indicadores) <- names[,1]; head(indicadores)
+```
+
+# Cluster jerarquico.
+
+Usaremos una distancia euclidiana bajo el método de separación Ward.D
+```{r fig.height=6}
+cluster <- hclust(dist(indicadores, method = "euclidean"),
+                  method = "ward.D")
+plot(cluster,hang = -0.01,cex=0.8)
+```
+Notamos la clara construcción de cinco grupos. Sostenemos que seis grupos son suficientes para clasificar.
+```{r}
+cutree(cluster,k=6)
+```
+
+Vamos a utilizar ahora la métrica Manhattan y el método de separación completo
+```{r fig.height=6}
+cluster <- hclust(dist(indicadores, method = "manhattan"),
+                  method = "complete")
+plot(cluster,hang = -0.01,cex=0.8)
+```
+
+Nuevamente sostenemos que seis clusters son suficientes para clasificar.
+```{r}
+cutree(cluster,k=6)
+```
+Un análisis cuidadoso de ambos dendogramas nos revela el gran parecido que tienen ambas clasificaciones. Manteniendose al margen Bank Capital en un grupo. En el segundo grupo, tenemos el banco visionfund de Ecuador. En el tercer grupo tenemos en ambos dendogramas, por ejemplo, el banco de Pichincha, el total de bancos privados, los bancos privados comerciales, banco del Austro, Machala, entre otros. En el cuarto grupo tenemos, por ejemplo, los bancos Guayaquil, Loja, Bolivariano, Citibank, entre otros. En el quinto grupo tenemos los bancos Procredit, Litoral, Amazonas, Finca, entre otros. En último grupo, ambos dendogramas presentan BP. DelBank y BP. D-Miro.
+
+# Cluster no jerárquico.
+
+Vamos a clasificar los datos haciendo uso de un cluster no jerarquico. Aplicaremos el algoritmo de k-medias. Primero buscaremos el número óptimo de clasificación. Nosotros propondremos 6 como valor óptimo.
+```{r}
+clusteroptimo <- NbClust(indicadores,
+                         distance="euclidean",
+                         min.nc=2,
+                         max.nc=8,
+                         method="ward.D",
+                         index="all")
+```
+
+Los métodos de selección proponen dos clusters como la mejor clasificación. Evaluamos el cluster con dos clasificadores aplicando una silueta.
+```{r}
+cls2 <- kmeans(indicadores,2)
+silueta <- silhouette(cls2$cluster,
+                      dist(indicadores,method="euclidean"))
+
+fviz_silhouette(silueta)
+```
+
+Al parecer el cluster puede mejorarse algo más utilizando otro método, pero por el momento podemos decir que la casificación es decente. Vamos a visualizarlo.
+```{r}
+fviz_cluster(cls2,data = indicadores)
+```
+
+Puede observarse cómo BP.Capital es práctimente un outlier en nuestros datos. De acuerdo a lo que sabemos de nuestra clusterización jerarquica, BP.Visionfund Ecuador es un potencial outlier también, puede verse incluso en este gráfica.Vamos a remover ambos bancos y a reclasificar para reclasificar.
+```{r}
+ind_bankCap <-  which(indicadores %>% row.names() == "BP.CAPITAL")
+ind_bankVisEc <- which(indicadores %>% row.names() == "BP.VISIONFUND.ECUADOR")
+
+indicadores <- indicadores[-c(ind_bankCap,ind_bankVisEc),]
+```
+
+Estudiamos el número óptimo de clasificadores. Nosotros consideramos que deben ser cuatro.
+```{r}
+clusteroptimo <- NbClust(indicadores,
+                         distance="euclidean",
+                         min.nc=2,
+                         max.nc=8,
+                         method="ward.D",
+                         index="all")
+```
+
+Podemos observar como tambien dos clusters son sugeridos.
+```{r}
+cls2 <- kmeans(indicadores,2)
+silueta <- silhouette(cls2$cluster,
+                      dist(indicadores,method="euclidean"))
+
+fviz_silhouette(silueta)
+```
+El rendimiento de la clasificación decayo. tenemos incluso una barra en negativo. Visualicemos el cluster.
+```{r}
+fviz_cluster(cls2,data = indicadores)
+```
+Estudiaremos que tal es una clasificación con cuatro clusters.
+```{r}
+cls4 <- kmeans(indicadores,4)
+silueta <- silhouette(cls4$cluster,
+                      dist(indicadores,method="euclidean"))
+
+fviz_silhouette(silueta)
+```
+
+Puede notarse cómo el rendimiento es incluso peor que el anterior. Por tanto, nos quedaremos con una clasificación de dos clusters a pesar de no ser tan satisfactoria.
